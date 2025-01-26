@@ -1,0 +1,153 @@
+package spiderman;
+import java.util.*;
+
+public class TrackSpot {
+
+    public static void main(String[] args) {
+        if (args.length < 4) {
+            System.out.println("Usage: java TrackSpot <dimension input file> <spiderverse input file> <spot input file> <trackspot output file>");
+            return;
+        }
+
+        String input = args[0];
+        String spiderverseIn = args[1];
+        String spot = args[2];
+        String output = args[3];
+
+
+        StdIn.setFile(input);
+        StdOut.setFile(output);
+        int a = StdIn.readInt();
+        int b = StdIn.readInt();
+        double c = StdIn.readDouble();
+
+        StdIn.readLine();
+
+        List<LinkedList<Integer>> clusterTable = new ArrayList<>(b);
+
+        for (int i = 0; i < b; i++) {
+            clusterTable.add(new LinkedList<>());
+        }
+
+        for (int i = 0; i < a; i++) {
+            int dimensionNumber = StdIn.readInt();
+            int canonEvents = StdIn.readInt();
+            int dimensionWeight = StdIn.readInt();
+
+            int index = dimensionNumber % b;
+
+            clusterTable.get(index).addFirst(dimensionNumber);
+
+            if ((double) (i + 1) / clusterTable.size() >= c) {
+                int newSize = clusterTable.size() * 2;
+
+                List<LinkedList<Integer>> newClusterTable = new ArrayList<>(newSize);
+
+                for (int j = 0; j < newSize; j++) {
+                    newClusterTable.add(new LinkedList<>());
+                }
+
+                for (LinkedList<Integer> cluster : clusterTable) {
+                    for (int dimension : cluster) {
+                        int newIndex = dimension % newSize;
+                        newClusterTable.get(newIndex).addFirst(dimension);
+                    }
+                }
+
+                clusterTable = newClusterTable;
+                b = newSize;
+            }
+        }
+
+        for (int i = 0; i < clusterTable.size(); i++) {
+            LinkedList<Integer> currentCluster = clusterTable.get(i);
+            LinkedList<Integer> prev1 = clusterTable.get((i - 1 + clusterTable.size()) % clusterTable.size());
+            LinkedList<Integer> prev2 = clusterTable.get((i - 2 + clusterTable.size()) % clusterTable.size());
+
+            if (i == 0) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            } else if (i == 1) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(clusterTable.get(clusterTable.size() - 1).getFirst()); // Last cluster's front dimension
+            } else {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            }
+
+        }
+
+
+        Map<Integer, List<Integer>> adjList = new HashMap<>();
+
+        for (LinkedList<Integer> cluster : clusterTable) {
+                int firstDimension = cluster.get(0);
+
+                for(int j = 1; j < cluster.size(); j++) {
+                    int dimension = cluster.get(j);
+
+                    adjList.computeIfAbsent(firstDimension, k -> new ArrayList<>()).add(dimension);
+                    adjList.computeIfAbsent(dimension, k -> new ArrayList<>()).add(firstDimension);
+
+                }
+            
+        }
+
+        StdIn.setFile(spiderverseIn);
+        int numPeople = StdIn.readInt();
+
+
+        for (int i = 0; i < numPeople; i++) {
+            int currentDim = StdIn.readInt();
+            String name = StdIn.readString();
+            int sig = StdIn.readInt();
+
+            
+            List<Integer> currentDimensionList = adjList.get(currentDim);
+
+
+            if (currentDimensionList == null) {
+                currentDimensionList = new ArrayList<>();
+            } else {
+            adjList.putIfAbsent(currentDim, currentDimensionList);
+
+            }
+        }
+
+        StdIn.setFile(spot);
+        int initial = StdIn.readInt();
+        int end = StdIn.readInt();
+        List<Integer> path = new ArrayList<>();
+        Set<Integer> visited = new HashSet<>(); 
+
+        path.add(initial);
+        visited.add(initial);
+
+        dfs(adjList, initial, end, path, visited);
+
+        for (int i = 0; i < path.size(); i++) {
+            StdOut.print(path.get(i) + " ");
+        }
+
+    }
+
+    private static boolean dfs(Map<Integer, List<Integer>> adjList, int current, int end, List<Integer> path, Set<Integer> visited) {
+        if (current == end) {
+            return true; 
+        }
+
+        List<Integer> neighbors = adjList.get(current);
+        if (neighbors != null) {
+            for (int neighbor : neighbors) {
+                if (!visited.contains(neighbor)) {
+                    path.add(neighbor);
+                    visited.add(neighbor);
+                    if (dfs(adjList, neighbor, end, path, visited)) {
+                        return true; 
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}

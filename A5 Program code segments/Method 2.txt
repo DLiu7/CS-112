@@ -1,0 +1,179 @@
+package spiderman;
+import java.util.*;
+
+/**
+ * Steps to implement this class main method:
+ * 
+ * Step 1:
+ * DimensionInputFile name is passed through the command line as args[0]
+ * Read from the DimensionsInputFile with the format:
+ * 1. The first line with three numbers:
+ *      i.    a (int): number of dimensions in the graph
+ *      ii.   b (int): the initial size of the cluster table prior to rehashing
+ *      iii.  c (double): the capacity(threshold) used to rehash the cluster table 
+ * 2. a lines, each with:
+ *      i.    The dimension number (int)
+ *      ii.   The number of canon events for the dimension (int)
+ *      iii.  The dimension weight (int)
+ * 
+ * Step 2:
+ * SpiderverseInputFile name is passed through the command line as args[1]
+ * Read from the SpiderverseInputFile with the format:
+ * 1. d (int): number of people in the file
+ * 2. d lines, each with:
+ *      i.    The dimension they are currently at (int)
+ *      ii.   The name of the person (String)
+ *      iii.  The dimensional signature of the person (int)
+ * 
+ * Step 3:
+ * ColliderOutputFile name is passed in through the command line as args[2]
+ * Output to ColliderOutputFile with the format:
+ * 1. e lines, each with a different dimension number, then listing
+ *       all of the dimension numbers connected to that dimension (space separated)
+ * 
+ * @author Seth Kelley
+ */
+
+public class Collider {
+
+    public static void main(String[] args) {
+
+        if (args.length < 3) {
+            StdOut.println(
+                "Execute: java -cp bin spiderman.Collider <dimension INput file> <spiderverse INput file> <collider OUTput file>");
+            return;
+        }
+
+        // WRITE YOUR CODE HERE
+        // Cluster Information
+        String input = args[0];
+        String spiderverseIn = args[1];
+        String output = args[2];
+
+        StdIn.setFile(input);
+        StdOut.setFile(output);
+
+        int a = StdIn.readInt();
+        int b = StdIn.readInt();
+        double c = StdIn.readDouble();
+
+        StdIn.readLine();
+
+        System.out.println("Initial cluster table size: " + b);
+        System.out.println("Threshold for rehashing " + c);
+
+        List<LinkedList<Integer>> clusterTable = new ArrayList<>(b);
+
+        for (int i = 0; i < b; i++) {
+            clusterTable.add(new LinkedList<>());
+        }
+
+        for (int i = 0; i < a; i++) {
+            int dimensionNumber = StdIn.readInt();
+            int canonEvents = StdIn.readInt();
+            int dimensionWeight = StdIn.readInt();
+
+            int index = dimensionNumber % b;
+
+            clusterTable.get(index).addFirst(dimensionNumber);
+
+            if ((double) (i + 1) / clusterTable.size() >= c) {
+                int newSize = clusterTable.size() * 2;
+
+                List<LinkedList<Integer>> newClusterTable = new ArrayList<>(newSize);
+
+                for (int j = 0; j < newSize; j++) {
+                    newClusterTable.add(new LinkedList<>());
+                }
+
+                for (LinkedList<Integer> cluster : clusterTable) {
+                    for (int dimension : cluster) {
+                        int newIndex = dimension % newSize;
+                        newClusterTable.get(newIndex).addFirst(dimension);
+                    }
+                }
+
+                clusterTable = newClusterTable;
+                b = newSize;
+                System.out.println("Cluster table rehashed. New size: " + newSize);
+            }
+        }
+
+        for (int i = 0; i < clusterTable.size(); i++) {
+            LinkedList<Integer> currentCluster = clusterTable.get(i);
+            LinkedList<Integer> prev1 = clusterTable.get((i - 1 + clusterTable.size()) % clusterTable.size());
+            LinkedList<Integer> prev2 = clusterTable.get((i - 2 + clusterTable.size()) % clusterTable.size());
+
+            if (i == 0) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            } else if (i == 1) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(clusterTable.get(clusterTable.size() - 1).getFirst()); // Last cluster's front dimension
+            } else {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            }
+
+            // Debug: Print current cluster
+            System.out.println("Current Cluster: " + currentCluster);
+        }
+
+        // Generating adjList
+        System.out.println("Generating adjList");
+
+        Map<Integer, List<Integer>> adjList = new HashMap<>();
+
+        for (LinkedList<Integer> cluster : clusterTable) {
+                int firstDimension = cluster.get(0);
+
+                for(int j = 1; j < cluster.size(); j++) {
+                    int dimension = cluster.get(j);
+
+                    adjList.computeIfAbsent(firstDimension, k -> new ArrayList<>()).add(dimension);
+                    adjList.computeIfAbsent(dimension, k -> new ArrayList<>()).add(firstDimension);
+
+                }
+            
+
+        }
+
+        System.out.println("Completed generating adjList");
+
+        //Reading and Inserting Spiderverse
+        StdIn.setFile(spiderverseIn);
+        int numPeople = StdIn.readInt();
+
+        System.out.println("Reading SpiderverseInputFile. Number of people: " + numPeople);
+
+
+        for (int i = 0; i < numPeople; i++) {
+            int currentDim = StdIn.readInt();
+            String name = StdIn.readString();
+            int sig = StdIn.readInt();
+
+            List<Integer> currentDimensionList = adjList.get(currentDim);
+
+
+            if (currentDimensionList == null) {
+                currentDimensionList = new ArrayList<>();
+            } else {
+            adjList.putIfAbsent(currentDim, currentDimensionList);
+
+            }
+
+            System.out.println("Added Spiderverse connection: " + currentDim);
+
+        }
+
+        // Output
+        System.out.println("Generating ColliderOutputFile");
+        for (Map.Entry<Integer, List<Integer>> entry : adjList.entrySet()) {
+            StdOut.print(entry.getKey());
+            for (int adjDim : entry.getValue()) {
+                StdOut.print(" " + adjDim);
+            }
+            StdOut.println();
+        }
+    }
+}

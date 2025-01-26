@@ -1,0 +1,219 @@
+package spiderman;
+import java.util.*;
+ 
+public class Collider {
+ 
+public ArrayList<LinkedList<Integer>> adjacencyList;
+public HashMap<Integer, Dimension> dimensionsMap;
+public static void main(String[] args) {
+if (args.length < 3) {
+StdOut.println("Execute: java -cp bin spiderman.Collider <dimension INput file> <spiderverse INput file> <collider OUTput file>");
+return;
+}
+ 
+String inputFile = args[0];
+String spiderverseInputFile = args[1];
+String outputFile = args[2];
+ 
+new Collider(outputFile, inputFile, spiderverseInputFile);
+}
+ 
+public Collider(String outputFile, String dimensionInputFile, String spiderverseInputFile) {
+dimensionsMap = new HashMap<>();
+adjacencyList = new ArrayList<>();
+ 
+ 
+createClusters(dimensionInputFile);
+createGraphs();
+ 
+addPeople(spiderverseInputFile);
+ 
+printAdjList(outputFile);
+}
+ 
+public void createClusters(String dimensionInputFile) {
+StdIn.setFile(dimensionInputFile);
+int numDimensions = StdIn.readInt();
+int initialTableSize = StdIn.readInt();
+double loadFactorThreshold = StdIn.readDouble();
+ 
+ClusterTable clusters = new ClusterTable(initialTableSize, loadFactorThreshold);
+for (int i = 0; i < numDimensions; i++) {
+int dimensionNumber = StdIn.readInt();
+int canonEvents = StdIn.readInt();
+int dimensionWeight = StdIn.readInt();
+Dimension dimension = new Dimension(dimensionNumber, canonEvents, dimensionWeight);
+dimensionsMap.put(dimensionNumber, dimension);
+clusters.addDimension(dimension);
+}
+clusters.connectClusters();
+}
+ 
+public void printAdjList(String outputFile) {
+ 
+StdOut.setFile(outputFile);
+for (int i = 0; i < adjacencyList.size(); i++) {
+LinkedList<Integer> neighbors = adjacencyList.get(i);
+if (!neighbors.isEmpty()) {
+StdOut.print(i + " ");
+for (int neighbor : neighbors) {
+StdOut.print(neighbor + " ");
+}
+StdOut.println();
+}
+}
+}
+ 
+public void addPeople(String spiderverseInputFile) {
+StdIn.setFile(spiderverseInputFile);
+ 
+int numPeople = StdIn.readInt();
+ 
+for (int i = 0; i < numPeople; i++) {
+int currentDimension = StdIn.readInt();
+String name = StdIn.readString();
+int dimensionalSignature = StdIn.readInt();
+ 
+Person person = new Person(name, dimensionalSignature, currentDimension);
+dimensionsMap.get(currentDimension).addResident(person);
+}
+}
+ 
+ 
+public void createGraphs() {
+int dimensionSize = Collections.max(dimensionsMap.keySet());
+ 
+adjacencyList = new ArrayList<>(dimensionSize + 1);
+ 
+for (int i = 0; i <= dimensionSize; i++) {
+adjacencyList.add(new LinkedList<>());
+}
+ 
+for (LinkedList<Dimension> cluster : ClusterTable.clusterTable) {
+if (cluster.isEmpty()) continue;
+ 
+Dimension firstDimension = cluster.getFirst();
+int firstDimensionNumber = firstDimension.getDimensionNumber();
+for (Dimension dimension : cluster) {
+int dimensionNumber = dimension.getDimensionNumber();
+if (dimensionNumber != firstDimensionNumber) {
+adjacencyList.get(firstDimensionNumber).add(dimensionNumber);
+adjacencyList.get(dimensionNumber).add(firstDimensionNumber);
+}
+}
+}
+}
+}
+
+
+
+
+[--------------------------------]
+
+
+XXX
+
+
+package spiderman;
+
+public class Person {
+    public String name;
+    public int dimensionalSignature; 
+    public int currentDimension;
+
+    public Person(String name, int dimensionalSignature, int currentDimension) {
+        this.name = name;
+        this.dimensionalSignature = dimensionalSignature;
+        this.currentDimension = currentDimension;
+    }
+
+    public String getName() { 
+        return name; 
+    }
+    public void setName (String name) { 
+        this.name = name; 
+    }
+
+    public int getDimensionalSignature() { return dimensionalSignature; }
+    public void setDimensionalSignature(int dimensionalSignature) { this.dimensionalSignature = dimensionalSignature; }
+
+    public int getCurrentDimension() { return currentDimension; }
+    public void setCurrentDimension(int currentDimension) { this.currentDimension = currentDimension; }
+
+    @Override
+    public String toString() {
+        return "Person{" +
+               "name='" + name + ''' +
+               ", dimensionalSignature=" + dimensionalSignature +
+               ", currentDimension=" + currentDimension +
+               '}';
+    }
+}
+
+
+
+XXX
+
+
+
+
+
+package spiderman;
+
+import java.util.ArrayList;
+
+public class Dimension {
+    public int dimensionNumber;
+    private int canonEvents;
+    private int dimensionWeight;
+    private ArrayList<Person> residents;
+
+    public Dimension(int dimensionNumber, int canonEvents, int dimensionWeight) {
+        this.dimensionNumber = dimensionNumber;
+        this.canonEvents = canonEvents;
+        this.dimensionWeight = dimensionWeight;
+        this.residents = new ArrayList<>();
+    }
+
+    public void addResident(Person person) {
+        residents.add(person);
+    }
+
+    public int getDimensionNumber() {
+        return dimensionNumber;
+    }
+
+    public void setDimensionNumber(int dimensionNumber) {
+        this.dimensionNumber = dimensionNumber;
+    }
+
+    public int getCanonEvents() {
+        return canonEvents;
+    }
+
+    public void setCanonEvents(int canonEvents) {
+        this.canonEvents = canonEvents;
+    }
+
+    public int getDimensionWeight() {
+        return dimensionWeight;
+    }
+
+    public void setDimensionWeight(int dimensionWeight) {
+        this.dimensionWeight = dimensionWeight;
+    }
+
+    public ArrayList<Person> getResidents() {
+        return residents;
+    }
+
+    @Override
+    public String toString() {
+        return "Dimension{" +
+                "dimensionNumber=" + dimensionNumber +
+                ", canonEvents=" + canonEvents +
+                ", dimensionWeight=" + dimensionWeight +
+                ", residents=" + residents +
+                '}';
+    }
+}

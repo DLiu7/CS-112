@@ -1,0 +1,144 @@
+package spiderman;
+
+import java.util.*;
+    public class CollectAnomalies {
+        private Map<String, Integer> name_sig;
+        private Map<Integer, String> dim_name;
+        private Map<String, Integer> name_dim;
+        private Map<String, Integer> sig_dim;
+        private int hubDimension;
+
+        private ArrayList<LinkedList<Integer>> adjList;
+
+        public static void main(String[] args) {
+            if (args.length < 4) {
+                StdOut.println(
+                    "Execute: java -cp bin spiderman.CollectAnomalies <dimension INput file> <spiderverse INput file> <hub INput file> <collected OUTput file>");
+                return;
+            }
+
+            String inputFile = args[0];
+            String spiderverseInputFile = args[1];
+            String hubInputFile = args[2];
+            String outputFile = args[3];
+    
+            new CollectAnomalies(outputFile, inputFile, spiderverseInputFile, hubInputFile);
+        }
+    
+        public CollectAnomalies(String outputFile, String dimensionInputFile, String spiderverseInputFile, String hubInputFile) {
+            dim_name = new HashMap<>();
+            name_dim = new HashMap<>();
+            name_sig = new HashMap<>();
+
+            adjList = new ArrayList<>();
+    
+            Collider collider = new Collider(outputFile, dimensionInputFile, spiderverseInputFile);
+            adjList = collider.adjacencyList;
+    
+            for (Map.Entry<Integer, Dimension> entry : collider.dimensionsMap.entrySet()) {
+                int dimensionNumber = entry.getKey();
+
+                Dimension dimension = entry.getValue();
+                
+                List<Person> residents = dimension.getResidents();
+                for (int i = 0; i < residents.size(); i++) {
+                    Person person = residents.get(i);
+                    name_dim.put(person.getName(), person.getCurrentDimension());
+                    name_sig.put(person.getName(), person.getDimensionalSignature());
+                }                
+            }
+    
+            readHubFile(hubInputFile);
+
+        List<String> collectedAnomalies = collectAnomalies();
+
+        printOut(outputFile, collectedAnomalies);
+    }
+
+    private void readHubFile(String hubInputFile) {
+
+        StdIn.setFile(hubInputFile);
+        hubDimension = StdIn.readInt();
+    }
+
+    private List<String> collectAnomalies() {
+        List<String> collectedAnomalies = new ArrayList<>();
+        boolean[] visited = new boolean[adjList.size()];
+
+        Queue<Integer> queue = new LinkedList<>();
+        Map<Integer, Integer> parentMap = new HashMap<>();
+
+        queue.offer(hubDimension);
+        visited[hubDimension] = true;
+
+        while (!queue.isEmpty()) {
+            int currentDimension = queue.poll();
+
+            for (int i = 0; i < adjList.get(currentDimension).size(); i++) {
+                int neighbor = adjList.get(currentDimension).get(i);
+                if (!visited[neighbor]) {
+
+                    visited[neighbor] = true;
+                    queue.offer(neighbor);
+                    parentMap.put(neighbor, currentDimension);
+
+                    String anomaly = null;
+                    String spider = null;
+                    
+                    for (int j = 0; j < name_dim.size(); j++) {
+                        String name = name_dim.keySet().toArray(new String[0])[j];
+                        int dimension = name_dim.get(name);
+                        int signature = name_sig.get(name);
+
+                        if (dimension == neighbor) {
+                            if (signature != neighbor) {
+                                anomaly = name;
+                            } else {
+                                spider = name;
+                            }
+                        }
+                    }
+
+                    if (anomaly != null) {
+                        List<Integer> route = new ArrayList<>();
+                        int current = neighbor;
+                        while (current != hubDimension) {
+                            route.add(0, current);
+                            current = parentMap.get(current);
+                        }
+                        route.add(0, hubDimension);
+
+                        StringBuilder result = new StringBuilder();
+
+                        if (spider != null) {
+                            result.append(anomaly);
+                            result.append(" ");
+                            result.append(spider);
+                            Collections.reverse(route);
+                        } else {
+                            result.append(anomaly);
+                            for (int k = route.size() - 2; k >= 0; k--) {
+                                route.add(route.get(k));
+                            }
+                        }
+
+                        for (int dimension : route) {
+                            result.append(" ").append(dimension);
+                        }
+
+                        collectedAnomalies.add(result.toString());
+                    }
+                }
+            }
+        }
+
+        return collectedAnomalies;
+    }
+
+    private void printOut(String outputFile, List<String> collectedAnomalies) {
+        StdOut.setFile(outputFile);
+        for (String anomaly : collectedAnomalies) {
+            StdOut.println(anomaly);
+        }
+    }
+}

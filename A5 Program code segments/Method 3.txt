@@ -1,0 +1,160 @@
+package spiderman;
+
+import java.util.*;
+
+public class TrackSpot {
+    public static void main(String[] args) {
+        if (args.length < 4) {
+            StdOut.println("Execute: java -cp bin spiderman.TrackSpot <dimension INput file> <spiderverse INput file> <spot INput file> <trackspot OUTput file>");
+            return;
+        }
+
+        String input = args[0];
+        String spiderverseIn = args[1];
+        String spotIn = args[2];
+        String output = args[3];
+
+        createClusters(input);
+        createSpiderverse(spiderverseIn);
+        createSpot(spotIn, output);
+
+    }
+
+    private static void createSpot(String spotInputFile, String outputFile) {
+        StdIn.setFile(spotInputFile);
+
+        int initial = StdIn.readInt();
+        int destination = StdIn.readInt();
+
+        dfs(initial, destination, new HashSet<>());
+
+        StdOut.setFile(outputFile);
+        for (int dimension : path) {
+            StdOut.print(dimension + " ");
+        }
+    }
+
+    private static void dfs(int current, int destination, Set<Integer> visited) {
+
+        if (current == destination) {
+            return;
+        }
+
+        visited.add(current);
+
+        List<Integer> currentDimensionList = adjList.get(current);
+
+        if (currentDimensionList != null) {
+            for (int dimension : currentDimensionList) {
+                if (!visited.contains(dimension)) {
+                    path.add(dimension);
+                    dfs(dimension, destination, visited);
+                }
+            }
+        }
+
+    }
+
+    private static void createSpiderverse(String setFile) {
+        StdIn.setFile(setFile);
+        int numPeople = StdIn.readInt();
+
+
+        for (int i = 0; i < numPeople; i++) {
+            int currentDim = StdIn.readInt();
+            String name = StdIn.readString();
+            int sig = StdIn.readInt();
+
+            List<Integer> currentDimensionList = adjList.get(currentDim);
+
+
+            if (currentDimensionList == null) {
+                currentDimensionList = new ArrayList<>();
+            } else {
+            adjList.putIfAbsent(currentDim, currentDimensionList);
+
+            }
+        }
+    }
+
+    private static void createClusters(String setFile) {
+        StdIn.setFile(setFile);
+        int a = StdIn.readInt();
+        int b = StdIn.readInt();
+        double c = StdIn.readDouble();
+
+        StdIn.readLine();
+
+        List<LinkedList<Integer>> clusterTable = new ArrayList<>(b);
+
+        for (int i = 0; i < b; i++) {
+            clusterTable.add(new LinkedList<>());
+        }
+
+        for (int i = 0; i < a; i++) {
+            int dimensionNumber = StdIn.readInt();
+            int canonEvents = StdIn.readInt();
+            int dimensionWeight = StdIn.readInt();
+
+            int index = dimensionNumber % b;
+
+            clusterTable.get(index).addFirst(dimensionNumber);
+
+            if ((double) (i + 1) / clusterTable.size() >= c) {
+                int newSize = clusterTable.size() * 2;
+
+                List<LinkedList<Integer>> newClusterTable = new ArrayList<>(newSize);
+
+                for (int j = 0; j < newSize; j++) {
+                    newClusterTable.add(new LinkedList<>());
+                }
+
+                for (LinkedList<Integer> cluster : clusterTable) {
+                    for (int dimension : cluster) {
+                        int newIndex = dimension % newSize;
+                        newClusterTable.get(newIndex).addFirst(dimension);
+                    }
+                }
+
+                clusterTable = newClusterTable;
+                b = newSize;
+            }
+        }
+
+        for (int i = 0; i < clusterTable.size(); i++) {
+            LinkedList<Integer> currentCluster = clusterTable.get(i);
+            LinkedList<Integer> prev1 = clusterTable.get((i - 1 + clusterTable.size()) % clusterTable.size());
+            LinkedList<Integer> prev2 = clusterTable.get((i - 2 + clusterTable.size()) % clusterTable.size());
+
+            if (i == 0) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            } else if (i == 1) {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(clusterTable.get(clusterTable.size() - 1).getFirst()); // Last cluster's front dimension
+            } else {
+                currentCluster.add(prev1.getFirst());
+                currentCluster.add(prev2.getFirst());
+            }
+
+        }
+
+
+        Map<Integer, List<Integer>> adjList = new HashMap<>();
+
+        for (LinkedList<Integer> cluster : clusterTable) {
+                int firstDimension = cluster.get(0);
+
+                for(int j = 1; j < cluster.size(); j++) {
+                    int dimension = cluster.get(j);
+
+                    adjList.computeIfAbsent(firstDimension, k -> new ArrayList<>()).add(dimension);
+                    adjList.computeIfAbsent(dimension, k -> new ArrayList<>()).add(firstDimension);
+
+                }
+            }
+    }
+
+    public static Map<Integer, List<Integer>> adjList = new HashMap<>();
+    public static List<Integer> path = new ArrayList<>();
+}

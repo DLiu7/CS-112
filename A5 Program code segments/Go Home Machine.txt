@@ -1,0 +1,192 @@
+package spiderman;
+
+import java.util.*;
+
+public class GoHomeMachine {
+    
+    private ArrayList<LinkedList<Integer>> adjList;
+    private Map<Integer, Dimension> dimensionsMap;
+    private Map<String, Person> people;
+    private int hubDimension;
+
+    
+    public GoHomeMachine(String dimensionInputFile, String spiderverseInputFile, String hubInputFile, String anomaliesInputFile, String reportOutputFile) {
+        adjList = new ArrayList<>();
+
+        dimensionsMap = new HashMap<>();
+        people = new HashMap<>();
+
+        Collider collider = new Collider(reportOutputFile, dimensionInputFile, spiderverseInputFile);
+
+
+        adjList = collider.adjacencyList;
+        dimensionsMap = collider.dimensionsMap;
+
+        readHubInputFile(hubInputFile);
+
+        readSpiderverseInputFile(spiderverseInputFile);
+
+        List<String> reportLines = sendAnomaliesHome(anomaliesInputFile);
+        output(reportLines, reportOutputFile);
+    }
+    public static void main(String[] args) {
+        if (args.length < 5) {
+            StdOut.println(
+                "Execute: java -cp bin spiderman.GoHomeMachine <dimension INput file> <spiderverse INput file> <hub INput file> <anomalies INput file> <report OUTput file>");
+            return;
+        }
+
+        String dimensionInputFile = args[0];
+        String spiderverseInputFile = args[1];
+        String hubInputFile = args[2];
+        String anomaliesInputFile = args[3];
+
+        String outputFile = args[4];
+
+        new GoHomeMachine(dimensionInputFile, spiderverseInputFile, hubInputFile, anomaliesInputFile, outputFile);
+    }
+
+
+    private void readHubInputFile(String hubInputFile) {
+        StdIn.setFile(hubInputFile);
+        hubDimension = StdIn.readInt();
+    }
+
+    private void readSpiderverseInputFile(String spiderverseInputFile) {
+        StdIn.setFile(spiderverseInputFile);
+        int numPeople = StdIn.readInt();
+
+        for (int i = 0; i < numPeople; i++) {
+            int currentDimension = StdIn.readInt();
+            String name = StdIn.readString();
+            int dimensionalSignature = StdIn.readInt();
+            Person person = new Person(name, dimensionalSignature, currentDimension);
+            people.put(name, person);
+        }
+    }
+
+    private List<String> sendAnomaliesHome(String anomaliesInputFile) {
+        List<String> reportLines = new ArrayList<>();
+        StdIn.setFile(anomaliesInputFile);
+        int numAnomalies = StdIn.readInt();
+
+        for (int i = 0; i < numAnomalies; i++) {
+            String name = StdIn.readString();
+            int timeAllowed = StdIn.readInt();
+            Person anomaly = people.get(name);
+            int homeDimension = anomaly.getDimensionalSignature();
+
+            Map<Integer, Integer> algoOutput = algo(hubDimension);
+            List<Integer> path = getPath(hubDimension, homeDimension, algoOutput);
+
+            int totalTime = calculateTime(path);
+
+            String reportLine;
+
+            if (totalTime <= timeAllowed)
+                reportLine = dimensionsMap.get(homeDimension).getCanonEvents() + " " + name + " SUCCESS " + pathToString(path);
+
+            else {
+                Dimension homeDim = dimensionsMap.get(homeDimension);
+                homeDim.setCanonEvents(homeDim.getCanonEvents() - 1);
+                reportLine = homeDim.getCanonEvents() + " " + name + " FAILED " + pathToString(path);
+            }
+
+            reportLines.add(reportLine);
+        }
+
+        return reportLines;
+    }
+
+    private Map<Integer, Integer> algo(int source) {
+        Map<Integer, Integer> distances = new HashMap<>();
+        
+        PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[1] - b[1]);
+
+        for (int dimension : dimensionsMap.keySet()) {
+            distances.put(dimension, Integer.MAX_VALUE);
+        }
+        distances.put(source, 0);
+
+        pq.offer(new int[]{source, 0});
+
+        while (!pq.isEmpty()) {
+            int[] current = pq.poll();
+            int currentDimension = current[0];
+            int currentDistance = current[1];
+
+            if (currentDistance > distances.get(currentDimension)) {
+                continue;
+            }
+
+            for (int neighbor : adjList.get(currentDimension)) {
+                int weight = dimensionsMap.get(currentDimension).getDimensionWeight() + dimensionsMap.get(neighbor).getDimensionWeight();
+                int newDistance = currentDistance + weight;
+
+                if (newDistance < distances.get(neighbor)) {
+                    distances.put(neighbor, newDistance);
+                    pq.offer(new int[]{neighbor, newDistance});
+                }
+            }
+        }
+
+        return distances;
+    }
+
+    private String pathToString(List<Integer> path) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < path.size(); i++) {
+            int dimension = path.get(i);
+            sb.append(dimension).append(" ");
+        }
+        return sb.toString().trim();
+    }
+
+    private List<Integer> getPath(int source, int destination, Map<Integer, Integer> distances) {
+        List<Integer> path = new ArrayList<>();
+        int current = destination;
+
+        while (current != source) {
+            path.add(0, current);
+
+            int minDistance = Integer.MAX_VALUE;
+            int minNeighbor = -1;
+
+            for (int neighbor : adjList.get(current)) {
+                if (distances.get(neighbor) < minDistance) {
+                    minDistance = distances.get(neighbor);
+                    minNeighbor = neighbor;
+                }
+            }
+
+            current = minNeighbor;
+        }
+
+        path.add(0, source);
+        return path;
+    }
+
+    private int calculateTime(List<Integer> path) {
+        int time = 0;
+        int lastDim = -1;
+
+        for (int i = 0; i < path.size(); i++) {
+            int currentDim = path.get(i);
+            if (lastDim != -1) {
+                time += dimensionsMap.get(lastDim).getDimensionWeight() + dimensionsMap.get(currentDim).getDimensionWeight();
+            }
+            lastDim = currentDim;
+        }
+
+        return time;
+    }
+
+    private void output(List<String> reportLines, String outputFile) {
+        StdOut.setFile(outputFile);
+
+        for (int i = 0; i < reportLines.size(); i++) {
+            String line = reportLines.get(i);
+            StdOut.println(line);
+        }
+    }
+}
