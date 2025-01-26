@@ -1,2 +1,2 @@
 # CS-112
-Rutgers University, CS 1123 Data Structures
+Spring 2024 - Rutgers University, CS 112 Data Structures
